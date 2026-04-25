@@ -180,22 +180,22 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
 .turn-bar.duel-turn .turn-bar-name{color:#86efac;}
 
 .game-body{flex:1;display:flex;flex-direction:row;overflow:hidden;position:relative;}
-.menu-btn{position:absolute;top:6px;left:6px;z-index:100;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;width:30px;height:30px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;}
-.menu-btn span{display:block;width:13px;height:1.5px;background:rgba(255,255,255,.45);border-radius:2px;}
-.menu-dd{position:absolute;top:42px;left:6px;z-index:101;background:#1a0a0a;border:1px solid #ef4444;border-radius:10px;padding:5px;display:none;min-width:158px;}
+.menu-btn{position:absolute;top:6px;right:6px;z-index:100;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;width:30px;height:30px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;}
+.menu-btn span{display:block;width:13px;height:1.5px;background:rgba(255,255,255,.6);border-radius:2px;}
+.menu-dd{position:absolute;top:42px;right:6px;z-index:101;background:#1a0a0a;border:1px solid #ef4444;border-radius:10px;padding:5px;display:none;min-width:158px;}
 .menu-dd.open{display:block;}
-.menu-dd::before{content:'';position:absolute;top:-7px;left:10px;border:7px solid transparent;border-bottom-color:#ef4444;border-top:none;}
-.menu-dd::after{content:'';position:absolute;top:-5px;left:11px;border:6px solid transparent;border-bottom-color:#1a0a0a;border-top:none;}
+.menu-dd::before{content:'';position:absolute;top:-7px;right:10px;border:7px solid transparent;border-bottom-color:#ef4444;border-top:none;}
+.menu-dd::after{content:'';position:absolute;top:-5px;right:11px;border:6px solid transparent;border-bottom-color:#1a0a0a;border-top:none;}
 .m-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;}
 .m-item-red{color:#f87171;}.m-item-red:active{background:rgba(239,68,68,.1);}
 .m-item-blue{color:#93c5fd;}.m-item-blue:active{background:rgba(147,197,253,.1);}
 .m-sub{font-size:8px;font-weight:400;opacity:.5;display:block;}
-.round-lbl{position:absolute;top:7px;left:50%;transform:translateX(-50%);font-size:8px;color:rgba(255,255,255,.16);letter-spacing:3px;pointer-events:none;white-space:nowrap;}
-.sess-pill{position:absolute;top:7px;right:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:50px;padding:3px 8px;font-size:8px;color:rgba(255,255,255,.2);letter-spacing:2px;}
+.round-lbl{position:absolute;top:0;left:8px;height:100%;display:flex;align-items:center;font-size:9px;color:rgba(255,255,255,.35);letter-spacing:2px;pointer-events:none;white-space:nowrap;font-weight:700;}
+.sess-pill{display:none;}
 
-.cards-area{display:flex;flex-direction:row;height:100%;padding:6px 4px 6px 42px;gap:5px;flex:1;}
+.cards-area{display:flex;flex-direction:row;height:100%;padding:6px 4px 6px 8px;gap:5px;flex:1;}
 .gcard{flex:1;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.1);position:relative;overflow:hidden;}
-.card-sub{position:absolute;top:7px;font-size:8px;letter-spacing:2px;opacity:.22;text-transform:uppercase;color:#fff;}
+.card-sub{position:absolute;top:8px;font-size:9px;letter-spacing:2px;opacity:.9;text-transform:uppercase;color:#fff;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.5);}
 .card-letter{font-weight:900;color:#fff;line-height:1;}
 .c-blue{background:#1565c0;}.c-red{background:#b71c1c;}
 .c-rev{background:#1565c0;position:relative;}
@@ -447,7 +447,9 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
 
 <!-- GAME -->
 <div id="s-game" class="scr">
-  <div class="turn-bar" id="turn-bar"><span class="turn-bar-name" id="turn-bar-name">—</span></div>
+  <div class="turn-bar" id="turn-bar">
+    <span class="turn-bar-name" id="turn-bar-name">—</span>
+  </div>
   <div class="game-body">
     <button class="menu-btn" id="menu-btn" onclick="togMenu()" style="display:none;"><span></span><span></span><span></span></button>
     <div class="menu-dd" id="menu-dd">
@@ -455,7 +457,6 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
       <div class="m-item m-item-red" onclick="confEnd()">⬛ <div>Terminar juego<span class="m-sub">Ver resumen</span></div></div>
     </div>
     <div class="round-lbl" id="round-lbl">RONDA 1</div>
-    <div class="sess-pill" id="sess-pill"></div>
     <div class="cards-area" id="cards-area">
       <div style="flex:1;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.1);font-size:13px;flex-direction:column;gap:8px;"><span style="font-size:26px;opacity:.25;">✦</span>Esperando al líder...</div>
     </div>
@@ -857,10 +858,7 @@ function syncDB(data){
   if(st==='playing'){
     roundNum=data.round||1;totalRounds=data.totalRounds||0;
     const wasIn=document.getElementById('s-game').classList.contains('on');
-    if(!wasIn){
-      goTo('game');
-      setupGameUI();
-    }
+    if(!wasIn){goTo('game');setupGameUI();}
     applyGame(data);return;
   }
   if(st==='ended'){showEnd(data);return;}
@@ -984,7 +982,6 @@ window.startGame=async function(){
 function setupGameUI(){
   const isL=myRole==='leader';
   document.getElementById('menu-btn').style.display=isL?'flex':'none';
-  document.getElementById('sess-pill').textContent='SESIÓN: '+(sessCode||'');
   document.getElementById('pp-leader').style.display=isL?'flex':'none';
   document.getElementById('pp-viewer').style.display=!isL?'flex':'none';
   if(!isL){
@@ -1017,36 +1014,69 @@ function updTurnBar(name,mode){
 
 // ── APPLY GAME STATE ──
 function applyGame(data){
+  // always guarantee panel visibility (Firebase listener can override styles)
+  if(myRole==='leader'){
+    document.getElementById('pp-leader').style.display='flex';
+    document.getElementById('pp-viewer').style.display='none';
+    document.getElementById('menu-btn').style.display='flex';
+  } else {
+    document.getElementById('pp-leader').style.display='none';
+    document.getElementById('pp-viewer').style.display='flex';
+    document.getElementById('menu-btn').style.display='none';
+  }
   roundNum=data.round||1;totalRounds=data.totalRounds||0;
   if(data.scores)scores=data.scores;
   if(data.players)players=data.players;
   document.getElementById('round-lbl').textContent='RONDA '+roundNum;
-  document.getElementById('sess-pill').textContent='SESIÓN: '+(sessCode||'');
-  const ck=JSON.stringify(data.cards);
-  if(data.cards&&ck!==lastCardsKey){lastCardsKey=ck;playFlip();renderCards(data.cards);}
-  if(data.turn)updTurnUI(data.turn,data.cards);
-  const curP=data.turn&&data.turn.active?players[data.turn.curP]:null;
+
+  const t=data.turn;
+  const faceDown=t&&!t.active&&t.revealed===false;
+  // include revealed state in key so face-down → revealed transition always triggers re-render
+  const revSt=t?t.revealed:undefined;
+  const ck=JSON.stringify({c:data.cards,r:revSt});
+
+  if(ck!==lastCardsKey){
+    lastCardsKey=ck;
+    if(data.cards){
+      // cards revealed — show them
+      playFlip();renderCards(data.cards);
+    } else if(faceDown){
+      // face-down state — show back of cards for all clients
+      const count=pendingHand?pendingHand.length:(t.cardCount||cfg.cardCount||3);
+      renderCardsFaceDown(count);
+    } else {
+      // no turn yet or turn complete — show waiting/next message
+      document.getElementById('cards-area').innerHTML=
+        `<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+          <span style="font-size:clamp(32px,6vw,52px);opacity:0.2;">✦</span>
+          <span style="color:rgba(255,255,255,.18);font-size:clamp(11px,1.6vw,15px);letter-spacing:2px;">
+            ${myRole==='leader'?'Toca ▶ para la siguiente ronda':'Esperando al líder...'}
+          </span>
+        </div>`;
+    }
+  }
+
+  if(t)updTurnUI(t,data.cards);
+  const curP=t&&t.active?players[t.curP]:null;
   renderPtsPanel(curP);
-  renderViewerPanel(data.turn);
-  if(data.turn&&data.turn.isDuel&&myRole==='leader'&&data.turn.awaitDuel)openDuelPanel();
+  renderViewerPanel(t);
+  if(t&&t.isDuel&&myRole==='leader'&&t.awaitDuel)openDuelPanel();
   else closeDuelPanel();
+
   if(myRole==='leader'){
     const dl=(data.deck||[]).length;
     const btn=document.getElementById('btn-nxt'),lbl=document.getElementById('nxt-lbl');
     const revBtn=document.getElementById('btn-reveal');
-    const t=data.turn;
-    const faceDown=t&&!t.active&&t.revealed===false; // cards drawn but not revealed yet
-    const turnDone=t&&!t.active&&t.revealed!==false; // turn complete, ready for next
-    const turnActive=t&&t.active; // turn in progress
-    if(turnActive){
+    if(t&&t.active){
+      // turn in progress
       btn.disabled=true;lbl.textContent=dl+' cartas';
       revBtn.disabled=true;
     } else if(faceDown){
-      // face-down: only reveal button active
+      // face-down: only reveal active
       btn.disabled=true;lbl.textContent=dl+' cartas';
-      if(!pendingHand) revBtn.disabled=false; // re-enable if local state lost
+      revBtn.disabled=!pendingHand;
     } else {
-      // turn done: next button active, reveal disabled
+      // turn done or no turn yet: next active
       btn.disabled=false;
       btn.querySelector('.pp-nxt-icon').textContent=dl===0?'🏁':'▶';
       lbl.textContent=dl===0?'Ver resultado':dl+' cartas';
@@ -1057,14 +1087,24 @@ function applyGame(data){
 
 function updTurnUI(t,cards){
   if(!t.active){
+    // face-down state: cards not revealed yet
+    if(t.revealed===false){
+      updTurnBar('Listo para revelar','other');
+      if(myRole==='leader') document.getElementById('pp-name-ldr').textContent='—';
+      return;
+    }
+    // turn complete
     updTurnBar('✓ Ronda lista','other');
-    document.getElementById('pp-name-ldr').textContent='✓ Ronda lista';
-    document.getElementById('t-num').textContent='—';document.getElementById('t-num').style.color='rgba(255,255,255,.15)';
-    setRing('t-ring',0,cfg.timeMax,'rgba(255,255,255,.1)',188.5);
-    setBtns(false);stopTmr();return;
+    if(myRole==='leader'){
+      document.getElementById('pp-name-ldr').textContent='✓ Ronda lista';
+      document.getElementById('t-num').textContent='—';
+      document.getElementById('t-num').style.color='rgba(255,255,255,.15)';
+      setRing('t-ring',0,cfg.timeMax,'rgba(255,255,255,.1)',188.5);
+      setBtns(false);stopTmr();
+    }
+    return;
   }
   const p=players[t.curP];if(!p)return;
-  // turno bar
   if(t.isDuel)updTurnBar('','duel');
   else if(myName&&p===myName)updTurnBar(p,'mine');
   else updTurnBar(p,'other');
@@ -1096,8 +1136,9 @@ function drawNext(){
     pendingHand=hand;
     renderCardsFaceDown(hand.length);
     // revealed:false means cards are face-down, waiting for reveal
+    // cardCount lets non-leader clients also render face-down cards
     update(sessRef,{deck:dk,round:roundNum,totalRounds:roundNum,
-      turn:{active:false,revealed:false,curP:0,timerMax:tMax,isDuel:hasDuel,awaitDuel:false},
+      turn:{active:false,revealed:false,curP:0,timerMax:tMax,isDuel:hasDuel,awaitDuel:false,cardCount:hand.length},
       cards:null});
     document.getElementById('btn-reveal').disabled=false;
     document.getElementById('btn-nxt').disabled=true;
@@ -1121,8 +1162,7 @@ window.revealCards=async function(){
   const hasDuel=hand.some(c=>c.t==='eff'&&c.effId==='duel');
   const hasBomb=hand.some(c=>c.t==='eff'&&c.effId==='bomb');
   const tMax=hasBomb?cfg.timeBomb:cfg.timeMax;
-  playFlip();
-  renderCards(hand);
+  renderCards(hand); // optimistic render; applyGame plays flip when Firebase confirms
   const t={active:true,revealed:true,curP:0,timerMax:tMax,isDuel:hasDuel,awaitDuel:hasDuel};
   turn={active:true,curP:0,timerMax:tMax,timerLeft:tMax,timerInt:null,isDuel:hasDuel};
   await update(sessRef,{cards:hand,turn:t});
@@ -1136,12 +1176,12 @@ window.revealCards=async function(){
 
 window.onNxt=function(){
   if(myRole!=='leader')return;
-  pendingHand=null; // clear any stale pending hand
+  document.getElementById('btn-nxt').disabled=true;
+  pendingHand=null;
   get(sessRef).then(s=>{
     const d=s.val();
-    // block if turn active or cards face-down waiting for reveal
-    if(d.turn&&d.turn.active)return;
-    if(d.turn&&d.turn.revealed===false)return; // face-down state, must reveal first
+    if(d.turn&&d.turn.active){document.getElementById('btn-nxt').disabled=false;return;}
+    if(d.turn&&d.turn.revealed===false)return;
     if((d.deck||[]).length===0){endGame();return;}
     drawNext();
   });
@@ -1272,10 +1312,15 @@ window.confEnd=function(){closeMenu();endGame();};
 async function endGame(){
   if(myRole!=='leader')return;
   stopTmr();
-  // save final scores briefly then delete after 30s
-  await update(sessRef,{status:'ended',scores,totalRounds});
+  const endedRef=sessRef;
+  await update(endedRef,{status:'ended',scores,totalRounds});
+  // only delete if status is still 'ended' — revancha may have restarted the session
   setTimeout(async()=>{
-    try{if(sessRef)await remove(sessRef);}catch(e){}
+    try{
+      if(!endedRef)return;
+      const s=await get(endedRef);
+      if(s.exists()&&s.val().status==='ended')await remove(endedRef);
+    }catch(e){}
   },30000);
 }
 function showEnd(data){
@@ -1303,8 +1348,9 @@ window.revanchaSameRules=async function(){
   if(myRole!=='leader')return;
   players.forEach(p=>scores[p]=0);
   const dk=buildDeck();lastCardsKey=null;roundNum=0;totalRounds=0;
+  goTo('game');setupGameUI();
   await update(sessRef,{status:'playing',scores:{...scores},deck:dk.map(c=>({...c})),round:0,totalRounds:0,cards:null,turn:null});
-  goTo('game');setupGameUI();drawNext();
+  drawNext();
 };
 window.revanchaNewRules=async function(){
   closeModal('modal-revenge');
@@ -1319,8 +1365,9 @@ window.newPlayersSameRules=async function(){
   if(myRole!=='leader')return;
   players.forEach(p=>scores[p]=0);
   const dk=buildDeck();lastCardsKey=null;roundNum=0;totalRounds=0;
+  goTo('game');setupGameUI();
   await update(sessRef,{status:'playing',scores:{...scores},deck:dk.map(c=>({...c})),round:0,totalRounds:0,cards:null,turn:null});
-  goTo('game');setupGameUI();drawNext();
+  drawNext();
 };
 window.newPlayersNewRules=function(){
   closeModal('modal-newp');
