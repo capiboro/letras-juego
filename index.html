@@ -368,8 +368,10 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
   <div class="join-title" id="join-title">UNIRSE</div>
   <div class="join-sub" id="join-sub">Ingresa tu nombre y el código de sesión</div>
   <div class="join-name-wrap">
-    <div class="join-lbl">TU NOMBRE</div>
-    <input class="inp" id="my-name-inp" maxlength="16" placeholder="¿Cómo te llamas?"/>
+    <div id="name-field-wrap" style="display:flex;flex-direction:column;gap:6px;">
+      <div class="join-lbl">TU NOMBRE</div>
+      <input class="inp" id="my-name-inp" maxlength="16" placeholder="¿Cómo te llamas?"/>
+    </div>
     <div class="join-lbl" style="margin-top:6px;">CÓDIGO DE SESIÓN</div>
     <input class="inp code-inp" id="code-inp" maxlength="4" placeholder="XXXX" oninput="onCodeInp()"/>
     <button class="btn-join" id="btn-join" onclick="joinSess()" disabled>ENTRAR</button>
@@ -384,6 +386,7 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
   <div class="cfg-body">
     <div class="cfg-panel" id="cp1">
       <div class="section-code"><span class="session-code" id="sess-code">----</span><div class="session-lbl">CÓDIGO DE SESIÓN · Comparte este código</div></div>
+      <button onclick="shareSessUrl()" style="background:rgba(118,255,118,0.08);border:1px solid rgba(118,255,118,0.3);color:#76ff76;border-radius:50px;padding:9px 20px;font-size:11px;cursor:pointer;font-family:Georgia,serif;letter-spacing:1px;width:100%;">📤 Compartir enlace de la sesión</button>
       <div class="col-hdr">JUGADORES</div>
       <div class="p-list" id="p-list"></div>
       <div class="hint-sm" id="p-hint">Agrega al menos 2 jugadores</div>
@@ -593,7 +596,7 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getDatabase,ref,set,get,onValue,update}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import{getDatabase,ref,set,get,onValue,update,remove}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 const FB={apiKey:"AIzaSyB1qo6n5hXiZL0GaIXv02zEa1T9Df4lpUg",authDomain:"letras-juego.firebaseapp.com",databaseURL:"https://letras-juego-default-rtdb.firebaseio.com",projectId:"letras-juego",storageBucket:"letras-juego.firebasestorage.app",messagingSenderId:"1024208844966",appId:"1:1024208844966:web:7219c321e88e2c34911c67"};
 const fbApp=initializeApp(FB);
 const db=getDatabase(fbApp);
@@ -658,7 +661,7 @@ function runSplash(){
   schedFlip('flip-a','front-a',stateA,2800);
   const bar=document.getElementById('splash-fill');
   let pct=0;
-  const steps=[{t:45,d:700},{t:72,d:500},{t:88,d:600},{t:100,d:400}];
+  const steps=[{t:25,d:900},{t:55,d:900},{t:78,d:900},{t:92,d:700},{t:100,d:600}];
   let si=0;
   function animStep(){
     if(si>=steps.length){setTimeout(()=>{goTo('start');},300);return;}
@@ -690,8 +693,26 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('code-inp').addEventListener('input',()=>{onCodeInp();validateJoin();});
   document.addEventListener('click',e=>{if(menuOpen&&!e.target.closest('#menu-btn')&&!e.target.closest('#menu-dd'))closeMenu();});
   if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
+  // check if arriving via shared session link
+  const urlCode=new URLSearchParams(window.location.search).get('code');
+  if(urlCode){
+    // show a banner on start screen so user picks role
+    const banner=document.createElement('div');
+    banner.style.cssText='position:fixed;top:0;left:0;right:0;background:#1565c0;color:white;text-align:center;padding:8px;font-size:12px;letter-spacing:1px;z-index:500;';
+    banner.textContent='📩 Te invitaron a la sesión '+urlCode.toUpperCase()+' · Elige tu rol para unirte';
+    document.body.appendChild(banner);
+    setTimeout(()=>banner.remove(),5000);
+  }
   runSplash();
 });
+
+// ── SHARE SESSION URL ──
+window.shareSessUrl=function(){
+  const base=window.location.href.split('?')[0];
+  const url=base+'?code='+(sessCode||'');
+  if(navigator.share){navigator.share({title:'LETRAS · Únete a la partida',text:'¡Únete a nuestra partida de LETRAS! Código: '+(sessCode||''),url});}
+  else{navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado:\n'+url)).catch(()=>alert('Enlace: '+url));}
+};
 
 // ── SHARE ──
 window.shareGame=function(){
@@ -719,13 +740,26 @@ window.closeModal=function(id){document.getElementById(id).classList.remove('ope
 window.selRole=function(role){
   myRole=role;
   if(role==='leader'){createSess();}
-  else{document.getElementById('join-title').textContent=role==='player'?'UNIRSE COMO JUGADOR':'UNIRSE COMO ESPECTADOR';document.getElementById('my-name-inp').value='';document.getElementById('code-inp').value='';document.getElementById('join-err').textContent='';document.getElementById('btn-join').disabled=true;goTo('join');}
+  else{
+    document.getElementById('join-title').textContent=role==='player'?'UNIRSE COMO JUGADOR':'UNIRSE COMO ESPECTADOR';
+    document.getElementById('my-name-inp').value='';
+    document.getElementById('code-inp').value='';
+    document.getElementById('join-err').textContent='';
+    document.getElementById('btn-join').disabled=true;
+    // hide name field for spectator
+    document.getElementById('name-field-wrap').style.display=role==='spectator'?'none':'flex';
+    // pre-fill code from URL if present
+    const urlCode=new URLSearchParams(window.location.search).get('code');
+    if(urlCode){document.getElementById('code-inp').value=urlCode.toUpperCase();onCodeInp();validateJoin();}
+    goTo('join');
+  }
 };
 
 function validateJoin(){
   const n=document.getElementById('my-name-inp').value.trim();
   const c=document.getElementById('code-inp').value.trim();
-  document.getElementById('btn-join').disabled=!(n.length>0&&c.length===4);
+  const needName=myRole!=='spectator';
+  document.getElementById('btn-join').disabled=!((!needName||n.length>0)&&c.length===4);
 }
 window.onCodeInp=function(){
   const v=document.getElementById('code-inp').value.toUpperCase();
@@ -734,21 +768,42 @@ window.onCodeInp=function(){
 
 // ── CREATE SESSION ──
 async function createSess(){
-  goTo('load');
+  // purge sessions older than 2 hours before creating new one
+  await purgeOldSessions();
   const code=Math.random().toString(36).substring(2,6).toUpperCase();
   sessCode=code;sessRef=ref(db,'sessions/'+code);
-  await set(sessRef,{status:'setup',players:[],scores:{},cfg:{...cfg},round:0,totalRounds:0,cards:null,turn:null,deck:null});
+  const now=Date.now();
+  await set(sessRef,{status:'setup',players:[],scores:{},cfg:{...cfg},round:0,totalRounds:0,cards:null,turn:null,deck:null,createdAt:now});
   document.getElementById('sess-code').textContent=code;
   players=[];scores={};cfgStep=1;
   updCfgUI();goTo('cfg');listenSess();
+}
+
+async function purgeOldSessions(){
+  try{
+    const allSess=await get(ref(db,'sessions'));
+    if(!allSess.exists())return;
+    const TWO_HOURS=2*60*60*1000;
+    const now=Date.now();
+    const promises=[];
+    allSess.forEach(child=>{
+      const d=child.val();
+      const age=now-(d.createdAt||0);
+      if(age>TWO_HOURS||d.status==='ended'){
+        promises.push(remove(ref(db,'sessions/'+child.key)));
+      }
+    });
+    await Promise.all(promises);
+    console.log('Sesiones purgadas:',promises.length);
+  }catch(e){console.warn('No se pudo purgar sesiones:',e);}
 }
 
 // ── JOIN ──
 window.joinSess=async function(){
   const name=document.getElementById('my-name-inp').value.trim();
   const code=document.getElementById('code-inp').value.toUpperCase();
-  if(!name){document.getElementById('join-err').textContent='Ingresa tu nombre.';return;}
-  myName=name;
+  if(myRole!=='spectator'&&!name){document.getElementById('join-err').textContent='Ingresa tu nombre.';return;}
+  myName=myRole==='spectator'?'Espectador':name;
   document.getElementById('btn-join').disabled=true;
   document.getElementById('join-err').textContent='Buscando...';
   const snap=await get(ref(db,'sessions/'+code));
@@ -756,6 +811,18 @@ window.joinSess=async function(){
   const data=snap.val();
   if(data.status==='ended'){document.getElementById('join-err').textContent='Esta sesión ya terminó.';document.getElementById('btn-join').disabled=false;return;}
   sessCode=code;sessRef=ref(db,'sessions/'+code);
+
+  // auto-add player to session list (skip spectators and duplicates)
+  if(myRole==='player'){
+    const currentPlayers=data.players||[];
+    const currentScores=data.scores||{};
+    if(!currentPlayers.includes(myName)){
+      const newPlayers=[...currentPlayers,myName];
+      const newScores={...currentScores,[myName]:0};
+      await update(sessRef,{players:newPlayers,scores:newScores});
+    }
+  }
+
   document.getElementById('lobby-code').textContent=code;
   document.getElementById('lobby-role').textContent=myRole==='spectator'?'ESPECTADOR':'JUGADOR';
   goTo('lobby');listenSess();
@@ -779,7 +846,10 @@ function syncDB(data){
   if(st==='playing'){
     roundNum=data.round||1;totalRounds=data.totalRounds||0;
     const wasIn=document.getElementById('s-game').classList.contains('on');
-    if(!wasIn){goTo('game');setupGameUI();}
+    if(!wasIn){
+      goTo('game');
+      setupGameUI();
+    }
     applyGame(data);return;
   }
   if(st==='ended'){showEnd(data);return;}
@@ -891,8 +961,12 @@ window.startGame=async function(){
   if(myRole!=='leader')return;
   players.forEach(p=>scores[p]=0);
   const deck=buildDeck();roundNum=0;totalRounds=0;
+  // setup UI immediately BEFORE awaiting Firebase — prevents blank screen race condition
+  goTo('game');
+  setupGameUI();
+  // now push to Firebase
   await update(sessRef,{status:'playing',players:[...players],scores:{...scores},cfg:{...cfg},deck:deck.map(c=>({...c})),round:0,totalRounds:0,cards:null,turn:null});
-  goTo('game');setupGameUI();drawNext();
+  drawNext();
 };
 
 // ── GAME UI ──
@@ -904,6 +978,19 @@ function setupGameUI(){
   document.getElementById('pp-viewer').style.display=!isL?'flex':'none';
   if(!isL){
     document.getElementById('ro-note').textContent=myRole==='spectator'?'ESPECTADOR':'JUGADOR';
+  }
+  if(isL){
+    // show initial state immediately so screen isn't blank
+    document.getElementById('cards-area').innerHTML=
+      `<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+        <span style="font-size:clamp(32px,6vw,52px);opacity:0.2;">✦</span>
+        <span style="color:rgba(255,255,255,.18);font-size:clamp(11px,1.6vw,15px);letter-spacing:2px;">Toca ▶ para robar las primeras cartas</span>
+      </div>`;
+    updTurnBar('Listo para comenzar','other');
+    document.getElementById('pp-name-ldr').textContent='—';
+    document.getElementById('btn-nxt').disabled=false;
+    document.getElementById('nxt-lbl').textContent='Robar cartas';
+    renderPtsPanel();
   }
 }
 
@@ -925,7 +1012,8 @@ function applyGame(data){
   const ck=JSON.stringify(data.cards);
   if(data.cards&&ck!==lastCardsKey){lastCardsKey=ck;playFlip();renderCards(data.cards);}
   if(data.turn)updTurnUI(data.turn,data.cards);
-  renderPtsPanel();
+  const curP=data.turn&&data.turn.active?players[data.turn.curP]:null;
+  renderPtsPanel(curP);
   renderViewerPanel(data.turn);
   if(data.turn&&data.turn.isDuel&&myRole==='leader'&&data.turn.awaitDuel)openDuelPanel();
   else closeDuelPanel();
@@ -999,7 +1087,7 @@ window.regResult=async function(ok){
     scores=ns;setBtns(true);startTmr();
     document.getElementById('pp-name-ldr').textContent=players[next];
   }
-  scores=ns;renderPtsPanel();
+  scores=ns;renderPtsPanel(next<players.length?players[next]:null);
 };
 
 // ── AJUSTE MANUAL DE PUNTOS ──
@@ -1008,24 +1096,23 @@ window.adjScore=async function(player,d){
   const ns={...(data.scores||{})};
   ns[player]=Math.max(0,(ns[player]||0)+d);
   await update(sessRef,{scores:ns});
-  scores=ns;renderPtsPanel();
+  scores=ns;
+  const curP=data.turn&&data.turn.active?players[data.turn.curP]:null;
+  renderPtsPanel(curP);
 };
 
 // ── PANELS ──
-function renderPtsPanel(){
-  get(sessRef).then(s=>{
-    const d=s.val();const curP=d&&d.turn&&d.turn.active?players[d.turn.curP]:null;
-    document.getElementById('pts-list').innerHTML=(players||[]).map(p=>`
-      <div class="pts-row ${p===curP?'cur-player':''}">
-        <div class="pts-av">${p[0].toUpperCase()}</div>
-        <span class="pts-nm ${p===curP?'cur':''}">${p}</span>
-        <div class="pts-adj">
-          <button class="pts-adj-btn" onclick="adjScore('${p}',-1)">−</button>
-          <span class="pts-score">${scores[p]||0}</span>
-          <button class="pts-adj-btn" onclick="adjScore('${p}',1)">+</button>
-        </div>
-      </div>`).join('');
-  });
+function renderPtsPanel(curP){
+  document.getElementById('pts-list').innerHTML=(players||[]).map(p=>`
+    <div class="pts-row ${p===curP?'cur-player':''}">
+      <div class="pts-av">${p[0].toUpperCase()}</div>
+      <span class="pts-nm ${p===curP?'cur':''}">${p}</span>
+      <div class="pts-adj">
+        <button class="pts-adj-btn" onclick="adjScore('${p}',-1)">−</button>
+        <span class="pts-score">${scores[p]||0}</span>
+        <button class="pts-adj-btn" onclick="adjScore('${p}',1)">+</button>
+      </div>
+    </div>`).join('');
 }
 function renderViewerPanel(t){
   const curP=t&&t.active?players[t.curP]:null;
@@ -1053,7 +1140,7 @@ window.duelWin=async function(idx){
   const pts=calcPts(data.cards);
   ns[players[idx]]=Math.max(0,(ns[players[idx]]||0)+pts);
   await update(sessRef,{scores:ns,'turn/active':false,'turn/awaitDuel':false});
-  scores=ns;renderPtsPanel();
+  scores=ns;renderPtsPanel(null);
 };
 window.duelSkip=async function(){closeDuelPanel();await update(sessRef,{'turn/active':false,'turn/awaitDuel':false});};
 
@@ -1102,7 +1189,15 @@ function closeMenu(){menuOpen=false;document.getElementById('menu-dd').classList
 window.confEnd=function(){closeMenu();endGame();};
 
 // ── END ──
-async function endGame(){if(myRole!=='leader')return;stopTmr();await update(sessRef,{status:'ended',scores,totalRounds});}
+async function endGame(){
+  if(myRole!=='leader')return;
+  stopTmr();
+  // save final scores briefly then delete after 30s
+  await update(sessRef,{status:'ended',scores,totalRounds});
+  setTimeout(async()=>{
+    try{if(sessRef)await remove(sessRef);}catch(e){}
+  },30000);
+}
 function showEnd(data){
   stopTmr();closeModal('modal-revenge');closeModal('modal-newp');
   const sc=data.scores||scores,tr=data.totalRounds||totalRounds;
@@ -1150,8 +1245,27 @@ window.newPlayersNewRules=function(){
   leaveSess();
 };
 
-window.leaveSess=function(){
+window.leaveSess=async function(){
   if(unsub){unsub();unsub=null;}
+  // if player leaves during setup, remove from players list
+  if(myRole==='player'&&sessRef&&myName){
+    try{
+      const snap=await get(sessRef);
+      if(snap.exists()){
+        const data=snap.val();
+        if(data.status==='setup'){
+          const newPlayers=(data.players||[]).filter(p=>p!==myName);
+          const newScores={...(data.scores||{})};
+          delete newScores[myName];
+          await update(sessRef,{players:newPlayers,scores:newScores});
+        }
+      }
+    }catch(e){}
+  }
+  // if leader leaves, delete the session
+  if(myRole==='leader'&&sessRef){
+    try{await remove(sessRef);}catch(e){}
+  }
   sessCode=null;sessRef=null;myRole=null;myName=null;
   players=[];scores={};lastCardsKey=null;menuOpen=false;
   stopTmr();turn={active:false,curP:0,timerMax:5,timerLeft:0,timerInt:null,isDuel:false};
