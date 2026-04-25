@@ -316,6 +316,20 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
 .btn-rev{background:#f0d060;color:#0f0f1a;border:none;border-radius:50px;padding:10px 12px;font-size:10px;font-weight:900;cursor:pointer;letter-spacing:2px;width:100%;font-family:Georgia,serif;}
 .btn-esec{background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.28);border-radius:50px;padding:9px 12px;font-size:10px;cursor:pointer;width:100%;font-family:Georgia,serif;}
 
+/* reveal button */
+.btn-reveal{width:100%;border-radius:13px;border:2px solid #f0d060;background:rgba(240,208,96,.08);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 4px;font-family:Georgia,serif;transition:background .15s;}
+.btn-reveal:not(:disabled):active{background:rgba(240,208,96,.2);}
+.btn-reveal:disabled{opacity:.2;cursor:default;}
+.btn-reveal-icon{font-size:clamp(22px,3.5vw,32px);color:#f0d060;}
+.btn-reveal-lbl{font-size:9px;color:rgba(240,208,96,.6);letter-spacing:1px;}
+/* spectator scoreboard */
+.spec-sb{background:rgba(255,255,255,.025);border-radius:10px;border:1px solid rgba(255,255,255,.05);padding:5px 7px;overflow-y:auto;flex:1;width:100%;}
+.spec-sb-row{display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:.5px solid rgba(255,255,255,.04);}
+.spec-sb-row:last-child{border:none;}
+.spec-medal{font-size:11px;flex-shrink:0;width:16px;text-align:center;}
+.spec-nm{flex:1;font-size:9px;color:rgba(255,255,255,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;}
+.spec-pts{font-size:10px;font-weight:700;color:#f0d060;}
+
 @keyframes flipIn{from{transform:rotateY(90deg) scale(.85);opacity:0;}to{transform:rotateY(0) scale(1);opacity:1;}}
 .flip{animation:flipIn .28s ease-out;}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
@@ -461,6 +475,10 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
         <button class="pp-btn pp-ok pp-bh" id="btn-ok" onclick="regResult(true)" disabled>✓</button>
         <button class="pp-btn pp-sk pp-bh" id="btn-sk" onclick="regResult(false)" disabled>☠</button>
       </div>
+      <button class="btn-reveal" id="btn-reveal" onclick="revealCards()" disabled>
+        <span class="btn-reveal-icon">👁</span>
+        <span class="btn-reveal-lbl">REVELAR</span>
+      </button>
       <button class="pp-nxt" id="btn-nxt" onclick="onNxt()" disabled>
         <span class="pp-nxt-icon">▶</span>
         <span class="pp-nxt-lbl" id="nxt-lbl">— cartas</span>
@@ -472,15 +490,8 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
     </div>
     <!-- panel viewer -->
     <div class="pp-viewer" id="pp-viewer" style="display:none;">
-      <div class="viewer-timer-wrap">
-        <svg width="44" height="44" viewBox="0 0 44 44">
-          <circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="4"/>
-          <circle id="v-ring" cx="22" cy="22" r="17" fill="none" stroke="#f0d060" stroke-width="4" stroke-linecap="round" stroke-dasharray="106.8" stroke-dashoffset="106.8" transform="rotate(-90 22 22)" style="transition:stroke-dashoffset 1s linear,stroke .3s;"/>
-        </svg>
-        <div class="viewer-t-num" id="v-num" style="color:rgba(255,255,255,.18);">—</div>
-      </div>
-      <div class="viewer-players" id="viewer-players"></div>
-      <div class="ro-note" id="ro-note"></div>
+      <div style="font-size:8px;color:rgba(255,255,255,.25);letter-spacing:1px;text-align:center;padding:2px 0;" id="ro-note"></div>
+      <div class="spec-sb" id="spec-sb"></div>
     </div>
     <!-- duelo panel -->
     <div class="duel-panel" id="duel-panel">
@@ -980,7 +991,6 @@ function setupGameUI(){
     document.getElementById('ro-note').textContent=myRole==='spectator'?'ESPECTADOR':'JUGADOR';
   }
   if(isL){
-    // show initial state immediately so screen isn't blank
     document.getElementById('cards-area').innerHTML=
       `<div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
         <span style="font-size:clamp(32px,6vw,52px);opacity:0.2;">✦</span>
@@ -988,6 +998,7 @@ function setupGameUI(){
       </div>`;
     updTurnBar('Listo para comenzar','other');
     document.getElementById('pp-name-ldr').textContent='—';
+    document.getElementById('btn-reveal').disabled=true;
     document.getElementById('btn-nxt').disabled=false;
     document.getElementById('nxt-lbl').textContent='Robar cartas';
     renderPtsPanel();
@@ -998,8 +1009,10 @@ function setupGameUI(){
 function updTurnBar(name,mode){
   const bar=document.getElementById('turn-bar');
   const nm=document.getElementById('turn-bar-name');
-  bar.className='turn-bar '+(mode==='mine'?'my-turn':mode==='duel'?'duel-turn':'other-turn');
-  nm.textContent=mode==='duel'?'⚔ DUELO · TODOS JUEGAN':name;
+  // spectator always sees yellow bar
+  const effectiveMode=myRole==='spectator'?'mine':mode;
+  bar.className='turn-bar '+(effectiveMode==='mine'?'my-turn':effectiveMode==='duel'?'duel-turn':'other-turn');
+  nm.textContent=(mode==='duel'?'⚔ DUELO · TODOS JUEGAN':name).toUpperCase();
 }
 
 // ── APPLY GAME STATE ──
@@ -1020,8 +1033,25 @@ function applyGame(data){
   if(myRole==='leader'){
     const dl=(data.deck||[]).length;
     const btn=document.getElementById('btn-nxt'),lbl=document.getElementById('nxt-lbl');
-    if(data.turn&&data.turn.active){btn.disabled=true;lbl.textContent=dl+' cartas';}
-    else{btn.disabled=false;btn.querySelector('.pp-nxt-icon').textContent=dl===0?'🏁':'▶';lbl.textContent=dl===0?'Ver resultado':dl+' cartas';}
+    const revBtn=document.getElementById('btn-reveal');
+    const t=data.turn;
+    const faceDown=t&&!t.active&&t.revealed===false; // cards drawn but not revealed yet
+    const turnDone=t&&!t.active&&t.revealed!==false; // turn complete, ready for next
+    const turnActive=t&&t.active; // turn in progress
+    if(turnActive){
+      btn.disabled=true;lbl.textContent=dl+' cartas';
+      revBtn.disabled=true;
+    } else if(faceDown){
+      // face-down: only reveal button active
+      btn.disabled=true;lbl.textContent=dl+' cartas';
+      if(!pendingHand) revBtn.disabled=false; // re-enable if local state lost
+    } else {
+      // turn done: next button active, reveal disabled
+      btn.disabled=false;
+      btn.querySelector('.pp-nxt-icon').textContent=dl===0?'🏁':'▶';
+      lbl.textContent=dl===0?'Ver resultado':dl+' cartas';
+      revBtn.disabled=true;
+    }
   }
 }
 
@@ -1039,7 +1069,7 @@ function updTurnUI(t,cards){
   else if(myName&&p===myName)updTurnBar(p,'mine');
   else updTurnBar(p,'other');
   if(myRole==='leader'){
-    document.getElementById('pp-name-ldr').textContent=p;
+    document.getElementById('pp-name-ldr').textContent=p.toUpperCase();
     if(turn.curP!==t.curP||!turn.active){
       turn.curP=t.curP;turn.active=true;turn.timerMax=t.timerMax||cfg.timeMax;turn.isDuel=t.isDuel||false;
       startTmr();
@@ -1049,6 +1079,8 @@ function updTurnUI(t,cards){
 }
 
 // ── DRAW ──
+let pendingHand=null; // cards waiting to be revealed
+
 function drawNext(){
   if(myRole!=='leader')return;
   get(sessRef).then(snap=>{
@@ -1061,13 +1093,59 @@ function drawNext(){
     const hasDuel=hand.some(c=>c.t==='eff'&&c.effId==='duel');
     const hasBomb=hand.some(c=>c.t==='eff'&&c.effId==='bomb');
     const tMax=hasBomb?cfg.timeBomb:cfg.timeMax;
-    const t={active:true,curP:0,timerMax:tMax,isDuel:hasDuel,awaitDuel:hasDuel};
-    turn={active:true,curP:0,timerMax:tMax,timerLeft:tMax,timerInt:null,isDuel:hasDuel};
-    update(sessRef,{deck:dk,cards:hand,round:roundNum,totalRounds:roundNum,turn:t});
+    pendingHand=hand;
+    renderCardsFaceDown(hand.length);
+    // revealed:false means cards are face-down, waiting for reveal
+    update(sessRef,{deck:dk,round:roundNum,totalRounds:roundNum,
+      turn:{active:false,revealed:false,curP:0,timerMax:tMax,isDuel:hasDuel,awaitDuel:false},
+      cards:null});
+    document.getElementById('btn-reveal').disabled=false;
+    document.getElementById('btn-nxt').disabled=true;
+    document.getElementById('nxt-lbl').textContent=dk.length+' cartas';
+    updTurnBar('Listo para revelar','other');
+    document.getElementById('pp-name-ldr').textContent='—';
   });
 }
-window.onNxt=function(){if(myRole!=='leader')return;get(sessRef).then(s=>{const d=s.val();if(d.turn&&d.turn.active)return;if((d.deck||[]).length===0){endGame();return;}drawNext();});};
 
+function renderCardsFaceDown(count){
+  const area=document.getElementById('cards-area');
+  area.innerHTML=Array(count).fill(0).map(()=>`
+    <div class="gcard flip" style="background:repeating-linear-gradient(45deg,#1b3a1b,#1b3a1b 4px,#224022 4px,#224022 8px);border-color:rgba(255,255,255,.12);">
+      <span style="font-size:clamp(32px,6vw,60px);opacity:0.25;color:white;">✦</span>
+    </div>`).join('');
+}
+
+window.revealCards=async function(){
+  if(!pendingHand)return;
+  const hand=pendingHand;pendingHand=null;
+  const hasDuel=hand.some(c=>c.t==='eff'&&c.effId==='duel');
+  const hasBomb=hand.some(c=>c.t==='eff'&&c.effId==='bomb');
+  const tMax=hasBomb?cfg.timeBomb:cfg.timeMax;
+  playFlip();
+  renderCards(hand);
+  const t={active:true,revealed:true,curP:0,timerMax:tMax,isDuel:hasDuel,awaitDuel:hasDuel};
+  turn={active:true,curP:0,timerMax:tMax,timerLeft:tMax,timerInt:null,isDuel:hasDuel};
+  await update(sessRef,{cards:hand,turn:t});
+  document.getElementById('btn-reveal').disabled=true;
+  startTmr();
+  setBtns(!hasDuel);
+  document.getElementById('pp-name-ldr').textContent=(players[0]||'').toUpperCase();
+  updTurnBar(players[0]||'','other');
+  renderPtsPanel(players[0]);
+};
+
+window.onNxt=function(){
+  if(myRole!=='leader')return;
+  pendingHand=null; // clear any stale pending hand
+  get(sessRef).then(s=>{
+    const d=s.val();
+    // block if turn active or cards face-down waiting for reveal
+    if(d.turn&&d.turn.active)return;
+    if(d.turn&&d.turn.revealed===false)return; // face-down state, must reveal first
+    if((d.deck||[]).length===0){endGame();return;}
+    drawNext();
+  });
+};
 // ── RESULTS ──
 window.regResult=async function(ok){
   if(myRole!=='leader')return;
@@ -1079,13 +1157,14 @@ window.regResult=async function(ok){
   else ns[p]=Math.max(0,(ns[p]||0)-1);
   const next=idx+1;
   if(next>=players.length){
-    setBtns(false);await update(sessRef,{scores:ns,'turn/active':false,'turn/curP':next});
+    setBtns(false);
+    await update(sessRef,{scores:ns,'turn/active':false,'turn/revealed':true,'turn/curP':next});
     turn.active=false;
   } else {
     turn.curP=next;
     await update(sessRef,{scores:ns,turn:{...t,curP:next}});
     scores=ns;setBtns(true);startTmr();
-    document.getElementById('pp-name-ldr').textContent=players[next];
+    document.getElementById('pp-name-ldr').textContent=players[next].toUpperCase();
   }
   scores=ns;renderPtsPanel(next<players.length?players[next]:null);
 };
@@ -1106,7 +1185,7 @@ function renderPtsPanel(curP){
   document.getElementById('pts-list').innerHTML=(players||[]).map(p=>`
     <div class="pts-row ${p===curP?'cur-player':''}">
       <div class="pts-av">${p[0].toUpperCase()}</div>
-      <span class="pts-nm ${p===curP?'cur':''}">${p}</span>
+      <span class="pts-nm ${p===curP?'cur':''}">${p.toUpperCase()}</span>
       <div class="pts-adj">
         <button class="pts-adj-btn" onclick="adjScore('${p}',-1)">−</button>
         <span class="pts-score">${scores[p]||0}</span>
@@ -1115,14 +1194,15 @@ function renderPtsPanel(curP){
     </div>`).join('');
 }
 function renderViewerPanel(t){
-  const curP=t&&t.active?players[t.curP]:null;
-  document.getElementById('viewer-players').innerHTML=(players||[]).map(p=>`<div class="viewer-player ${p===curP?'cur':''}">${p}</div>`).join('');
-  // timer for viewer (mirror)
-  if(t&&t.active&&myRole!=='leader'){
-    const tLeft=turn.timerLeft||t.timerMax||cfg.timeMax;
-    const col=tLeft>2?'#f0d060':'#f87171';
-    setRing('v-ring',Math.max(0,tLeft/(t.timerMax||cfg.timeMax)),t.timerMax,col,106.8);
-    const vn=document.getElementById('v-num');vn.textContent=Math.max(0,tLeft);vn.style.color=col;
+  if(myRole==='spectator'||myRole==='player'){
+    const medals=['🥇','🥈','🥉'];
+    const sorted=[...players].sort((a,b)=>(scores[b]||0)-(scores[a]||0));
+    document.getElementById('spec-sb').innerHTML=sorted.map((p,i)=>`
+      <div class="spec-sb-row">
+        <span class="spec-medal">${medals[i]||i+1}</span>
+        <span class="spec-nm">${p.toUpperCase()}</span>
+        <span class="spec-pts">${scores[p]||0}</span>
+      </div>`).join('');
   }
 }
 
@@ -1139,10 +1219,10 @@ window.duelWin=async function(idx){
   const ns={...(data.scores||{})};
   const pts=calcPts(data.cards);
   ns[players[idx]]=Math.max(0,(ns[players[idx]]||0)+pts);
-  await update(sessRef,{scores:ns,'turn/active':false,'turn/awaitDuel':false});
+  await update(sessRef,{scores:ns,'turn/active':false,'turn/revealed':true,'turn/awaitDuel':false});
   scores=ns;renderPtsPanel(null);
 };
-window.duelSkip=async function(){closeDuelPanel();await update(sessRef,{'turn/active':false,'turn/awaitDuel':false});};
+window.duelSkip=async function(){closeDuelPanel();await update(sessRef,{'turn/active':false,'turn/revealed':true,'turn/awaitDuel':false});};
 
 // ── CARDS ──
 function renderCards(hand){
@@ -1226,10 +1306,12 @@ window.revanchaSameRules=async function(){
   await update(sessRef,{status:'playing',scores:{...scores},deck:dk.map(c=>({...c})),round:0,totalRounds:0,cards:null,turn:null});
   goTo('game');setupGameUI();drawNext();
 };
-window.revanchaNewRules=function(){
+window.revanchaNewRules=async function(){
   closeModal('modal-revenge');
   if(myRole!=='leader')return;
   players.forEach(p=>scores[p]=0);
+  // set status to 'setup' so listener doesn't redirect back to ended
+  await update(sessRef,{status:'setup',scores:{...scores},cards:null,turn:null,deck:null,round:0,totalRounds:0});
   cfgStep=2;updCfgUI();goTo('cfg');
 };
 window.newPlayersSameRules=async function(){
