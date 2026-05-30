@@ -1057,14 +1057,9 @@ function listenSess(){
 }
 function syncDB(data){
   if(data.cfg){cfg={...cfg,...data.cfg};if(data.cfg.effects)cfg.effects=data.cfg.effects;}
-  // Leader owns players list locally — don't overwrite from Firebase during setup
-  if(myRole!=='leader'&&data.players)players=data.players;
-  if(myRole!=='leader'&&data.scores)scores=data.scores;
-  // During playing, always sync scores for everyone
-  if(data.status==='playing'){
-    if(data.players)players=data.players;
-    if(data.scores)scores=data.scores;
-  }
+  // Always sync players from Firebase — leader sees remote joins during setup
+  if(data.players)players=data.players;
+  if(data.scores)scores=data.scores;
   if(myRole!=='leader'&&data.gameMode)gameMode=data.gameMode;
   const st=data.status;
   if(st==='setup'){
