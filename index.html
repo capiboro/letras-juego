@@ -1029,7 +1029,7 @@ async function createSess(){
   listenSess();
 }
 async function purgeOldSessions(){
-  try{const all=await get(ref(db,'sessions'));if(!all.exists())return;const now=Date.now();const del=[];all.forEach(c=>{const d=c.val();if(now-(d.createdAt||0)>7200000||d.status==='ended')del.push(remove(ref(db,'sessions/'+c.key)));});await Promise.all(del);if(del.length)console.log(`Purged ${del.length} session(s)`);}catch(e){console.warn('Purge:',e);}
+  try{const all=await get(ref(db,'sessions'));if(!all.exists())return;const now=Date.now();const del=[];all.forEach(c=>{const d=c.val();if(now-(d.createdAt||0)>7200000||d.status==='ended'||(d.createdAt||0)>now)del.push(remove(ref(db,'sessions/'+c.key)));});await Promise.all(del);if(del.length)console.log(`Purged ${del.length} session(s)`);}catch(e){console.warn('Purge:',e);}
 }
 
 // ── JOIN SESSION ──
