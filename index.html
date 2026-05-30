@@ -194,14 +194,35 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
 .sess-pill{display:none;}
 
 .cards-area{display:flex;flex-direction:row;height:100%;padding:6px 4px 6px 8px;gap:5px;flex:1;}
-.gcard{flex:1;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.1);position:relative;overflow:hidden;}
-.card-sub{position:absolute;top:8px;font-size:9px;letter-spacing:2px;opacity:.9;text-transform:uppercase;color:#fff;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.5);}
-.card-letter{font-weight:900;color:#fff;line-height:1;}
-.c-blue{background:#1565c0;}.c-red{background:#b71c1c;}
-.c-rev{background:#1565c0;position:relative;}
-.c-rev::after{content:'';position:absolute;top:0;right:0;width:50%;height:100%;background:#b71c1c;}
-.c-rev-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
-.c-eff{border-width:2px;}
+
+/* ── NUEVA CARTA ESTILO UNO ── */
+.gcard{flex:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2);}
+
+.card-corner{position:absolute;font-weight:900;color:rgba(255,255,255,.9);line-height:1;font-size:clamp(10px,1.6vw,16px);text-shadow:0 1px 3px rgba(0,0,0,.4);}
+.card-corner.tl{top:7px;left:9px;}
+.card-corner.br{bottom:7px;right:9px;transform:rotate(180deg);}
+
+.card-letter{font-weight:900;color:#fff;line-height:1;text-shadow:2px 4px 12px rgba(0,0,0,.35),0 0 40px rgba(255,255,255,.15);position:relative;z-index:1;}
+
+.c-blue{background:linear-gradient(145deg,#1976d2 0%,#42a5f5 55%,#1565c0 100%);}
+.c-blue::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 35% 35%,rgba(255,255,255,.18) 0%,transparent 65%);}
+
+.c-red{background:linear-gradient(145deg,#c62828 0%,#ef5350 55%,#b71c1c 100%);}
+.c-red::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 35% 35%,rgba(255,255,255,.18) 0%,transparent 65%);}
+
+.c-rev{position:relative;overflow:hidden;background:linear-gradient(180deg,#1976d2,#1565c0);}
+.c-rev::before{content:'';position:absolute;top:0;right:0;width:50%;height:100%;background:linear-gradient(180deg,#ef5350,#c62828);}
+.c-rev-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.c-rev-letter{font-weight:900;color:#fff;line-height:1;text-shadow:2px 4px 10px rgba(0,0,0,.5);position:relative;z-index:2;}
+
+.c-eff{border:none;}
+.c-eff::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 35% 35%,rgba(255,255,255,.15) 0%,transparent 65%);}
+
+.c-back{background:#fff;position:relative;}
+.c-back-stripes{position:absolute;inset:0;background:repeating-linear-gradient(45deg,#e53935,#e53935 14px,#fff 14px,#fff 28px);}
+.c-back-logo{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:rgba(255,255,255,.92);border-radius:10px;padding:8px 14px;border:2px solid rgba(229,57,53,.3);}
+.c-back-logo span{font-size:clamp(20px,3.5vw,36px);font-weight:900;color:#e53935;letter-spacing:2px;line-height:1;}
+.c-back-logo small{font-size:clamp(6px,.9vw,9px);color:rgba(229,57,53,.5);letter-spacing:3px;text-transform:uppercase;}
 
 /* panel líder */
 .pp-leader{width:clamp(220px,30vw,280px);height:100%;display:flex;flex-direction:column;padding:5px 5px 5px 3px;gap:4px;flex-shrink:0;}
@@ -780,15 +801,21 @@ window.onCodeInp=function(){
 
 // ── CREATE SESSION ──
 async function createSess(){
-  // purge sessions older than 2 hours before creating new one
-  await purgeOldSessions();
+  // Navigate immediately so the user sees something
   const code=Math.random().toString(36).substring(2,6).toUpperCase();
-  sessCode=code;sessRef=ref(db,'sessions/'+code);
-  const now=Date.now();
-  await set(sessRef,{status:'setup',players:[],scores:{},cfg:{...cfg},round:0,totalRounds:0,cards:null,turn:null,deck:null,createdAt:now});
+  sessCode=code;
   document.getElementById('sess-code').textContent=code;
   players=[];scores={};cfgStep=1;
-  updCfgUI();goTo('cfg');listenSess();
+  updCfgUI();goTo('cfg');
+  // Now do Firebase work in background
+  sessRef=ref(db,'sessions/'+code);
+  const now=Date.now();
+  // Purge old sessions with a timeout so it never blocks
+  const purgePromise=purgeOldSessions();
+  const timeout=new Promise(res=>setTimeout(res,3000));
+  await Promise.race([purgePromise,timeout]);
+  await set(sessRef,{status:'setup',players:[],scores:{},cfg:{...cfg},round:0,totalRounds:0,cards:null,turn:null,deck:null,createdAt:now});
+  listenSess();
 }
 
 async function purgeOldSessions(){
@@ -1151,8 +1178,9 @@ function drawNext(){
 function renderCardsFaceDown(count){
   const area=document.getElementById('cards-area');
   area.innerHTML=Array(count).fill(0).map(()=>`
-    <div class="gcard flip" style="background:repeating-linear-gradient(45deg,#1b3a1b,#1b3a1b 4px,#224022 4px,#224022 8px);border-color:rgba(255,255,255,.12);">
-      <span style="font-size:clamp(32px,6vw,60px);opacity:0.25;color:white;">✦</span>
+    <div class="gcard c-back flip">
+      <div class="c-back-stripes"></div>
+      <div class="c-back-logo"><span>LETRAS</span><small>el juego</small></div>
     </div>`).join('');
 }
 
@@ -1267,15 +1295,15 @@ window.duelSkip=async function(){closeDuelPanel();await update(sessRef,{'turn/ac
 // ── CARDS ──
 function renderCards(hand){
   const font=FONTS.find(f=>f.id===cfg.font)||FONTS[0];
-  const sz='font-size:clamp(78px,13vw,145px);';
+  const sz=`font-size:clamp(72px,12vw,138px);font-family:${font.css};`;
   document.getElementById('cards-area').innerHTML=(hand||[]).map(c=>{
-    if(c.t==='blue')return`<div class="gcard c-blue flip"><span class="card-sub">INCLUIR</span><span class="card-letter" style="${sz}font-family:${font.css};">${c.l}</span></div>`;
-    if(c.t==='red') return`<div class="gcard c-red flip"><span class="card-sub">EVITAR</span><span class="card-letter" style="${sz}font-family:${font.css};">${c.l}</span></div>`;
+    if(c.t==='blue')return`<div class="gcard c-blue flip"><span class="card-corner tl">${c.l}</span><span class="card-letter" style="${sz}">${c.l}</span><span class="card-corner br">${c.l}</span></div>`;
+    if(c.t==='red') return`<div class="gcard c-red flip"><span class="card-corner tl">${c.l}</span><span class="card-letter" style="${sz}">${c.l}</span><span class="card-corner br">${c.l}</span></div>`;
     if(c.t==='eff'){
       const e=EFF.find(x=>x.id===c.effId);if(!e)return'';
-      const bdr=e.cbo?`border-color:${e.cbo};`:'';
-      if(e.id==='reverse')return`<div class="gcard c-rev flip"><span class="card-sub" style="z-index:2;">EFECTO</span><div class="c-rev-inner"><span style="font-size:clamp(46px,8vw,90px);position:relative;z-index:1;">${e.icon}</span><span style="font-size:clamp(10px,1.4vw,15px);font-weight:700;letter-spacing:1px;position:relative;z-index:1;margin-top:5px;">REVERSA</span></div></div>`;
-      return`<div class="gcard c-eff flip" style="background:${e.cb};${bdr}color:#fff;"><span class="card-sub">EFECTO</span><span style="font-size:clamp(46px,8vw,90px);">${e.icon}</span><span style="font-size:clamp(11px,1.6vw,17px);font-weight:700;letter-spacing:1px;margin-top:6px;color:${e.nc};">${e.name}</span></div>`;
+      const effBg=e.cb?`background:linear-gradient(145deg,${e.cb}dd,${e.cb});`:'';
+      if(e.id==='reverse')return`<div class="gcard c-rev flip"><div class="c-rev-inner"><span class="c-rev-letter" style="font-size:clamp(52px,9vw,105px);">${e.icon}</span></div></div>`;
+      return`<div class="gcard c-eff flip" style="${effBg}color:#fff;"><span style="font-size:clamp(48px,8.5vw,95px);position:relative;z-index:1;">${e.icon}</span><span style="font-size:clamp(9px,1.3vw,14px);font-weight:700;letter-spacing:2px;margin-top:5px;color:${e.nc};position:relative;z-index:1;text-transform:uppercase;">${e.name}</span></div>`;
     }
     return'';
   }).join('');
