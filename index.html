@@ -28,31 +28,7 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
 .scr{display:none;width:100%;height:100%;position:absolute;inset:0;}
 .scr.on{display:flex;}
 
-/* ══════════════════════════════════════════
-   SPLASH
-══════════════════════════════════════════ */
-#s-splash{background:#0f0f1a;flex-direction:column;align-items:center;justify-content:center;
-          gap:20px;overflow:hidden;position:relative;}
-.beta-band{position:absolute;top:28px;left:-42px;width:190px;background:#b71c1c;
-           transform:rotate(-35deg);padding:5px 0;text-align:center;z-index:10;}
-.beta-band span{color:#fff;font-size:11px;font-weight:700;letter-spacing:3px;}
-.splash-title{display:flex;align-items:center;line-height:1;}
-.t-letter{font-size:clamp(52px,10vw,96px);font-weight:900;letter-spacing:2px;display:inline-block;color:#f0d060;}
-.flip-letter{display:inline-block;width:clamp(36px,7vw,70px);height:clamp(56px,11vw,108px);perspective:600px;margin:0 1px;}
-.flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;}
-.flip-front,.flip-back{position:absolute;inset:0;border-radius:8px;display:flex;align-items:center;
-                       justify-content:center;backface-visibility:hidden;-webkit-backface-visibility:hidden;
-                       font-size:clamp(42px,8.5vw,80px);font-weight:900;color:#fff;border:2px solid rgba(255,255,255,.18);}
-.flip-back{background:repeating-linear-gradient(45deg,#1b3a1b,#1b3a1b 4px,#224022 4px,#224022 8px);
-           border-color:rgba(255,255,255,.12);transform:rotateY(180deg);}
-.flip-back-inner{font-size:clamp(18px,4vw,32px);opacity:.3;color:#fff;}
-.splash-sub{color:rgba(255,255,255,.22);font-size:clamp(8px,1.5vw,12px);letter-spacing:5px;
-            text-transform:uppercase;margin-top:-10px;}
-.splash-loader-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;width:clamp(140px,40%,260px);}
-.splash-bar{width:100%;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
-.splash-fill{height:100%;background:#f0d060;border-radius:2px;width:0%;}
-.splash-txt{color:rgba(255,255,255,.2);font-size:10px;letter-spacing:2px;animation:blink 1.2s ease-in-out infinite;}
-.sdot{position:absolute;border-radius:50%;opacity:.04;pointer-events:none;}
+
 
 /* ══════════════════════════════════════════
    START
@@ -533,33 +509,8 @@ body{display:flex;align-items:center;justify-content:center;font-family:Georgia,
 
 <div id="app">
 
-<!-- ══════════ SPLASH ══════════ -->
-<div id="s-splash" class="scr on">
-  <div class="sdot" style="width:300px;height:300px;background:#f0d060;top:-100px;right:-80px;"></div>
-  <div class="sdot" style="width:200px;height:200px;background:#1565c0;bottom:-60px;right:60px;"></div>
-  <div class="sdot" style="width:150px;height:150px;background:#b71c1c;bottom:20px;left:-40px;"></div>
-  <div class="beta-band"><span>v0.5.12 · beta</span></div>
-  <div class="splash-title">
-    <span class="t-letter">L</span><span class="t-letter">E</span><span class="t-letter">T</span>
-    <div class="flip-letter"><div class="flip-inner" id="flip-r">
-      <div class="flip-front" id="front-r">R</div>
-      <div class="flip-back"><span class="flip-back-inner">✦</span></div>
-    </div></div>
-    <div class="flip-letter"><div class="flip-inner" id="flip-a">
-      <div class="flip-front" id="front-a">A</div>
-      <div class="flip-back"><span class="flip-back-inner">✦</span></div>
-    </div></div>
-    <span class="t-letter">S</span>
-  </div>
-  <div class="splash-sub">el juego de cartas</div>
-  <div class="splash-loader-wrap">
-    <div class="splash-bar"><div class="splash-fill" id="splash-fill"></div></div>
-    <div class="splash-txt">CARGANDO...</div>
-  </div>
-</div>
-
 <!-- ══════════ START ══════════ -->
-<div id="s-start" class="scr">
+<div id="s-start" class="scr on">
   <div class="start-title">
     <span class="st-letter">L</span><span class="st-letter">E</span><span class="st-letter">T</span>
     <span class="st-letter st-r">R</span><span class="st-letter st-a">A</span><span class="st-letter">S</span>
@@ -965,36 +916,6 @@ let gameState='idle';
 let gameMode='normal'; // 'normal' | 'competencia'
 let roundHistory=[]; // [{round,winner}]
 
-// ── SPLASH ──
-const BLUE='#1565c0',RED='#e53935';
-const stR={c:Math.random()<.5?'blue':'red'},stA={c:Math.random()<.5?'blue':'red'};
-function applyCol(el,c){el.style.background=c==='blue'?BLUE:RED;el.style.border='2px solid rgba(255,255,255,.18)';}
-function flipCard(fi,fr,st){
-  fi.style.transition='transform .5s ease-in-out';fi.style.transform='rotateY(180deg)';
-  setTimeout(()=>{st.c=Math.random()<.5?'blue':'red';applyCol(fr,st.c);
-    fi.style.transition='transform .5s ease-in-out';fi.style.transform='rotateY(360deg)';
-    setTimeout(()=>{fi.style.transition='none';fi.style.transform='rotateY(0deg)';},520);
-  },520);
-}
-function schedFlip(fi,fr,st,base){
-  const fl=document.getElementById(fi),fr_=document.getElementById(fr);applyCol(fr_,st.c);
-  function loop(){const w=base+(Math.random()-.5)*800;setTimeout(()=>{flipCard(fl,fr_,st);loop();},Math.max(600,w));}
-  setTimeout(loop,base*.4+Math.random()*500);
-}
-function runSplash(){
-  schedFlip('flip-r','front-r',stR,2200);schedFlip('flip-a','front-a',stA,2800);
-  const bar=document.getElementById('splash-fill');let pct=0;
-  const steps=[{t:25,d:900},{t:55,d:900},{t:78,d:900},{t:92,d:700},{t:100,d:600}];let si=0;
-  function animStep(){
-    if(si>=steps.length){setTimeout(()=>goTo('start'),300);return;}
-    const s=steps[si++],start=pct,diff=s.t-start,t0=performance.now();
-    function tick(now){const p=Math.min((now-t0)/s.d,1);pct=start+diff*p;bar.style.width=pct+'%';
-      if(p<1)requestAnimationFrame(tick);else setTimeout(animStep,180);}
-    requestAnimationFrame(tick);
-  }
-  setTimeout(animStep,400);
-}
-
 // ── AUDIO ──
 let actx=null;
 function ac(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();return actx;}
@@ -1011,18 +932,24 @@ window.goTo=goTo;
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded',()=>{
-  buildSteps();buildDiffGrid();buildFontGrid();buildEffList();buildRulesGuide();buildRulesPts();
-  document.getElementById('p-inp').addEventListener('keydown',e=>{if(e.key==='Enter')addP();});
-  const lni=document.getElementById('leader-name-inp');
-  if(lni)lni.addEventListener('input',()=>{document.getElementById('btn-leader-next').disabled=!lni.value.trim();});
-  document.getElementById('code-inp').addEventListener('keydown',e=>{if(e.key==='Enter')joinSess();});
-  document.getElementById('my-name-inp').addEventListener('input',validateJoin);
-  document.getElementById('code-inp').addEventListener('input',()=>{onCodeInp();validateJoin();});
-  document.addEventListener('click',e=>{if(menuOpen&&!e.target.closest('#z1-menu')&&!e.target.closest('#menu-dd'))closeMenu();});
+  try{buildSteps();}catch(e){console.error('buildSteps',e);}
+  try{buildDiffGrid();}catch(e){console.error('buildDiffGrid',e);}
+  try{buildFontGrid();}catch(e){console.error('buildFontGrid',e);}
+  try{buildEffList();}catch(e){console.error('buildEffList',e);}
+  try{buildRulesGuide();}catch(e){console.error('buildRulesGuide',e);}
+  try{buildRulesPts();}catch(e){console.error('buildRulesPts',e);}
+  try{
+    document.getElementById('p-inp').addEventListener('keydown',e=>{if(e.key==='Enter')addP();});
+    const lni=document.getElementById('leader-name-inp');
+    if(lni)lni.addEventListener('input',()=>{document.getElementById('btn-leader-next').disabled=!lni.value.trim();});
+    document.getElementById('code-inp').addEventListener('keydown',e=>{if(e.key==='Enter')joinSess();});
+    document.getElementById('my-name-inp').addEventListener('input',validateJoin);
+    document.getElementById('code-inp').addEventListener('input',()=>{onCodeInp();validateJoin();});
+    document.addEventListener('click',e=>{if(menuOpen&&!e.target.closest('#z1-menu')&&!e.target.closest('#menu-dd'))closeMenu();});
+  }catch(e){console.error('event listeners',e);}
   if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
   const urlCode=new URLSearchParams(window.location.search).get('code');
   if(urlCode){const b=document.createElement('div');b.style.cssText='position:fixed;top:0;left:0;right:0;background:#1565c0;color:#fff;text-align:center;padding:8px;font-size:12px;letter-spacing:1px;z-index:500;';b.textContent='📩 Sesión '+urlCode.toUpperCase()+' · Elige tu rol para unirte';document.body.appendChild(b);setTimeout(()=>b.remove(),5000);}
-  runSplash();
 });
 
 // ── SHARE ──
@@ -1039,7 +966,7 @@ window.shareResults=function(){
 // ── RULES ──
 window.openRules=function(from){
   // Detect actual current screen so back button always returns correctly
-  const screens=['splash','start','leader-name','mode','join','cfg','lobby','game','rules','feedback','end'];
+  const screens=['start','leader-name','mode','join','cfg','lobby','game','rules','feedback','end'];
   const active=screens.find(id=>document.getElementById('s-'+id)&&document.getElementById('s-'+id).classList.contains('on'))||'start';
   rulesFrom=active==='rules'?from:active; // don't override if already in rules
   const lbl=rulesFrom==='game'?'← Volver al juego':rulesFrom==='end'?'← Volver a resultados':'← Volver';
